@@ -1,1 +1,1044 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>区分求積法（リマン和）インタラクティブ・シミュレーター</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Math.js for safe mathematical expression parsing -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/11.8.0/math.js"></script>
+  
+  <!-- KaTeX for rendered mathematical formulas -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
 
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .code-font {
+      font-family: 'Fira Code', monospace;
+    }
+    /* Custom scrollbar for control panel */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    canvas {
+      touch-action: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white shadow-md border-b border-slate-800 sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 py-3 sm:px-6 flex flex-wrap justify-between items-center gap-2">
+      <div class="flex items-center space-x-3">
+        <div class="bg-indigo-600 text-white p-2 rounded-lg font-bold text-lg shadow-sm">
+          $\int$
+        </div>
+        <div>
+          <h1 class="text-xl font-bold tracking-tight text-slate-100">高校数学 区分求積法シミュレーター</h1>
+          <p class="text-xs text-slate-400">極限 $\lim_{n \to \infty} \sum f(x_k) \Delta x = \int_a^b f(x)dx$ の直感的理解</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700 text-slate-300">
+        <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>Math.js & KaTeX ハイブリッド評価エンジン</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Grid Container -->
+  <main class="max-w-7xl mx-auto px-4 py-4 sm:px-6 flex-1 w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Control Panel (5 cols) -->
+    <section class="lg:col-span-5 flex flex-col gap-5">
+      
+      <!-- Card 1: Function & Interval Input -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+          1. 関数 $f(x)$ と区間 $[a, b]$ の設定
+        </h2>
+
+        <!-- Presets -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-1.5">定番プリセット関数</label>
+          <div class="grid grid-cols-3 gap-1.5" id="preset-buttons">
+            <!-- Dynamically generated preset buttons -->
+          </div>
+        </div>
+
+        <!-- Function input -->
+        <div>
+          <label for="func-input" class="block text-xs font-semibold text-slate-600 mb-1">
+            関数 $f(x)$ （例: <code class="text-indigo-600">x^2</code>, <code class="text-indigo-600">sin(x)</code>, <code class="text-indigo-600">1/(1+x)</code>）
+          </label>
+          <div class="relative">
+            <input type="text" id="func-input" value="x^2" 
+              class="w-full pl-3 pr-10 py-2 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 code-font text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition">
+            <span class="absolute right-3 top-2.5 text-xs font-bold text-slate-400">y =</span>
+          </div>
+        </div>
+
+        <!-- Interval inputs [a, b] -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="a-input" class="block text-xs font-semibold text-slate-600 mb-1">始点 $a$</label>
+            <input type="text" id="a-input" value="0" 
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 code-font text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+          <div>
+            <label for="b-input" class="block text-xs font-semibold text-slate-600 mb-1">終点 $b$</label>
+            <input type="text" id="b-input" value="1" 
+              class="w-full px-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-slate-900 code-font text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+          </div>
+        </div>
+
+        <!-- Error Message Container -->
+        <div id="error-msg" class="hidden p-3 bg-rose-50 border border-rose-200 rounded-lg text-rose-700 text-xs leading-relaxed"></div>
+      </div>
+
+      <!-- Card 2: Riemann Sum Mode & Divisions -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path></svg>
+          2. 区分求積の方式 & 分割数 $n$
+        </h2>
+
+        <!-- Approximation Mode Selection -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-500 mb-2">近似方式（代表点の取り方）</label>
+          <div class="grid grid-cols-3 gap-2">
+            <button type="button" data-mode="right" class="mode-btn py-2 px-3 text-xs font-medium rounded-lg border transition text-center focus:outline-none border-indigo-600 bg-indigo-50 text-indigo-700 shadow-sm">
+              右側和<br><span class="text-[10px] opacity-75">($k=1 \dots n$)</span>
+            </button>
+            <button type="button" data-mode="left" class="mode-btn py-2 px-3 text-xs font-medium rounded-lg border transition text-center focus:outline-none border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100">
+              左側和<br><span class="text-[10px] opacity-75">($k=0 \dots n-1$)</span>
+            </button>
+            <button type="button" data-mode="mid" class="mode-btn py-2 px-3 text-xs font-medium rounded-lg border transition text-center focus:outline-none border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100">
+              中点和<br><span class="text-[10px] opacity-75">($k-0.5$)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Partition n Slider & Direct Input -->
+        <div class="space-y-2">
+          <div class="flex justify-between items-center">
+            <label for="n-slider" class="text-xs font-semibold text-slate-600">分割数 $n$</label>
+            <div class="flex items-center space-x-1">
+              <button id="n-decrement" class="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 active:bg-slate-200 text-sm font-bold">-</button>
+              <input type="number" id="n-input" min="1" max="500" value="10" 
+                class="w-16 text-center py-0.5 border border-slate-300 rounded-lg font-mono font-semibold text-slate-900 text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+              <button id="n-increment" class="w-7 h-7 flex items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100 active:bg-slate-200 text-sm font-bold">+</button>
+            </div>
+          </div>
+
+          <input type="range" id="n-slider" min="1" max="200" step="1" value="10" 
+            class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600">
+
+          <!-- Animation auto play -->
+          <div class="flex justify-between items-center pt-1">
+            <button id="animate-btn" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition">
+              <svg id="play-icon" class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>
+              <span id="animate-text">自動増加アニメーション</span>
+            </button>
+            <span id="dx-val" class="text-xs font-mono text-slate-500">$\Delta x = 0.1000$</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Card 3: Calculation Results & Mathematical Formulas -->
+      <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200/80 space-y-4">
+        <h2 class="text-base font-bold text-slate-800 flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+          3. 計算結果と比較
+        </h2>
+
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="p-2.5 rounded-xl bg-indigo-50/70 border border-indigo-100">
+            <span class="block text-[11px] font-semibold text-indigo-600 mb-0.5">区分求積の近似値</span>
+            <span id="approx-val" class="font-mono text-base font-bold text-indigo-950">0.38500</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-100">
+            <span class="block text-[11px] font-semibold text-emerald-600 mb-0.5">定積分の真値 $\int$</span>
+            <span id="exact-val" class="font-mono text-base font-bold text-emerald-950">0.33333</span>
+          </div>
+          <div class="p-2.5 rounded-xl bg-slate-100 border border-slate-200">
+            <span class="block text-[11px] font-semibold text-slate-500 mb-0.5">絶対誤差 $| Error |$</span>
+            <span id="error-val" class="font-mono text-base font-bold text-rose-600">0.05167</span>
+          </div>
+        </div>
+
+        <!-- Formula Display Box (KaTeX) -->
+        <div class="p-3 bg-slate-900 rounded-xl text-white space-y-2 overflow-x-auto">
+          <div id="formula-general" class="text-xs text-slate-300 py-1"></div>
+          <div class="border-t border-slate-800 pt-2">
+            <div id="formula-current" class="text-xs text-emerald-400"></div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- Right Column: HTML5 Canvas Visualizer (7 cols) -->
+    <section class="lg:col-span-7 flex flex-col gap-3">
+      
+      <!-- Canvas Wrapper Card -->
+      <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200/80 flex flex-col flex-1 relative min-h-[480px]">
+        
+        <!-- Canvas Toolbar -->
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100">
+          <div class="flex items-center space-x-2">
+            <span class="inline-block w-3 h-3 rounded-full bg-indigo-500"></span>
+            <span class="text-xs font-bold text-slate-700">グラフ可視化ビュー</span>
+            <span class="text-[11px] text-slate-400 font-medium">(ドラッグ移動 / ホイールでズーム)</span>
+          </div>
+
+          <div class="flex items-center space-x-1.5">
+            <button id="btn-zoom-in" title="拡大" class="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 active:bg-slate-100">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7"></path></svg>
+            </button>
+            <button id="btn-zoom-out" title="縮小" class="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 active:bg-slate-100">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM13 10H7"></path></svg>
+            </button>
+            <button id="btn-fit-view" title="全体を表示" class="px-2 py-1 text-xs font-medium rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 active:bg-slate-100 flex items-center gap-1">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-2V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
+              <span>リセット</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="relative flex-1 w-full h-full min-h-[380px] mt-2 overflow-hidden rounded-xl bg-slate-95/50 border border-slate-100" id="canvas-container">
+          <canvas id="graph-canvas" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+          
+          <!-- Hover Tooltip -->
+          <div id="tooltip" class="absolute hidden pointer-events-none bg-slate-900/90 backdrop-blur text-white text-xs p-2.5 rounded-xl shadow-xl border border-slate-700/80 z-20 space-y-1">
+            <!-- Tooltip dynamic contents -->
+          </div>
+        </div>
+
+        <!-- Legend Footer -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mt-3 pt-2 text-xs text-slate-500 border-t border-slate-100">
+          <div class="flex items-center space-x-4">
+            <span class="flex items-center space-x-1.5">
+              <span class="w-3 h-3 rounded-sm bg-indigo-500/50 border border-indigo-600 inline-block"></span>
+              <span>正の長方形 ($f(x) \ge 0$)</span>
+            </span>
+            <span class="flex items-center space-x-1.5">
+              <span class="w-3 h-3 rounded-sm bg-rose-500/50 border border-rose-600 inline-block"></span>
+              <span>負の長方形 ($f(x) < 0$)</span>
+            </span>
+            <span class="flex items-center space-x-1.5">
+              <span class="w-3.5 h-0.5 bg-indigo-600 inline-block"></span>
+              <span>$y = f(x)$</span>
+            </span>
+          </div>
+          <div class="text-[11px] text-slate-400">
+            ヒント: 長方形の上にマウスを重ねると詳細情報を確認できます
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Educational Explanation Card -->
+      <div class="bg-indigo-950 text-indigo-100 rounded-2xl p-4 shadow-sm border border-indigo-900 text-xs leading-relaxed space-y-2">
+        <h3 class="font-bold text-white flex items-center gap-1.5 text-sm">
+          <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path d="M11 3a1 1 0 10-2 0v1a1 1 0 102 0V3zM15.657 5.757a1 1 0 00-1.414-1.414l-.707.707a1 1 0 001.414 1.414l.707-.707zM18 10a1 1 0 01-1 1h-1a1 1 0 110-2h1a1 1 0 011 1zM5.05 6.464A1 1 0 103.636 5.05l-.707.707a1 1 0 001.414 1.414l.707-.707zM5 10a1 1 0 01-1 1H3a1 1 0 110-2h1a1 1 0 011 1zM8 16v-1a1 1 0 10-2 0v1a1 1 0 102 0zM12 14a1 1 0 100-2 1 1 0 000 2zM6.16 14.16a1 1 0 011.414 0l.707.707a1 1 0 11-1.414 1.414l-.707-.707a1 1 0 010-1.414z"></path></svg>
+          区分求積法のポイント
+        </h3>
+        <p>
+          区間 $[a, b]$ を $n$ 等分したときの各小区間の幅を $\Delta x = \frac{b-a}{n}$ とします。
+          分割数 $n$ を限りなく大きくしていく（$n \to \infty$）と、長方形の幅 $\Delta x$ は $0$ に近付き、長方形の面積の総和（リマン和）は曲線 $y = f(x)$ と $x$ 軸で囲まれた定積分 $\int_a^b f(x) dx$ の値へと正確に収束していきます。
+        </p>
+      </div>
+
+    </section>
+
+  </main>
+
+  <script>
+    /**
+     * Presets definitions
+     */
+    const PRESETS = [
+      { name: 'y = x²', expr: 'x^2', a: 0, b: 1 },
+      { name: 'y = x³', expr: 'x^3', a: 0, b: 1 },
+      { name: 'y = sin(x)', expr: 'sin(x)', a: 0, b: 'pi' },
+      { name: 'y = 1/(1+x)', expr: '1/(1+x)', a: 0, b: 1 },
+      { name: 'y = √x', expr: 'sqrt(x)', a: 0, b: 1 },
+      { name: 'y = e^x', expr: 'exp(x)', a: 0, b: 1 },
+      { name: 'y = 4/(1+x²)', expr: '4/(1+x^2)', a: 0, b: 1 } // Integrates to PI
+    ];
+
+    // State Variables
+    let currentExpr = 'x^2';
+    let compiledExpr = null;
+    let paramA = 0;
+    let paramB = 1;
+    let partitionN = 10;
+    let approxMode = 'right'; // 'right', 'left', 'mid'
+    let isAnimating = false;
+    let animInterval = null;
+
+    // View Transformation (World Coordinates to Canvas Screen Coordinates)
+    let viewXMin = -0.2;
+    let viewXMax = 1.2;
+    let viewYMin = -0.2;
+    let viewYMax = 1.2;
+
+    let isDragging = false;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // Hover state
+    let hoveredRectIndex = -1;
+    let riemannRectsData = [];
+
+    // DOM Elements
+    const funcInput = document.getElementById('func-input');
+    const aInput = document.getElementById('a-input');
+    const bInput = document.getElementById('b-input');
+    const nSlider = document.getElementById('n-slider');
+    const nInput = document.getElementById('n-input');
+    const nDecrement = document.getElementById('n-decrement');
+    const nIncrement = document.getElementById('n-increment');
+    const animateBtn = document.getElementById('animate-btn');
+    const animateText = document.getElementById('animate-text');
+    const playIcon = document.getElementById('play-icon');
+    const errorMsg = document.getElementById('error-msg');
+    
+    const approxValElem = document.getElementById('approx-val');
+    const exactValElem = document.getElementById('exact-val');
+    const errorValElem = document.getElementById('error-val');
+    const dxValElem = document.getElementById('dx-val');
+    const formulaGeneral = document.getElementById('formula-general');
+    const formulaCurrent = document.getElementById('formula-current');
+
+    const canvas = document.getElementById('graph-canvas');
+    const ctx = canvas.getContext('2d');
+    const canvasContainer = document.getElementById('canvas-container');
+    const tooltip = document.getElementById('tooltip');
+
+    /**
+     * Safe expression evaluation helper
+     */
+    function evalFunction(xVal) {
+      if (!compiledExpr) return 0;
+      try {
+        const scope = { x: xVal, pi: Math.PI, e: Math.E };
+        const res = compiledExpr.evaluate(scope);
+        if (typeof res === 'object' && res.isComplex) return res.re; // handled complex
+        return Number(res);
+      } catch (e) {
+        return NaN;
+      }
+    }
+
+    /**
+     * Evaluate constant expressions like 'pi', '2*pi', 'sqrt(2)'
+     */
+    function parseValue(str) {
+      try {
+        const scope = { pi: Math.PI, e: Math.E };
+        return Number(math.evaluate(str, scope));
+      } catch (e) {
+        return NaN;
+      }
+    }
+
+    /**
+     * Calculate High-Precision Numerical Integral using Simpson's 3/8 Rule
+     */
+    function computeExactIntegral(a, b) {
+      const N = 1200; // Even number of subintervals
+      const h = (b - a) / N;
+      let sum = evalFunction(a) + evalFunction(b);
+
+      for (let i = 1; i < N; i++) {
+        const x = a + i * h;
+        const weight = (i % 2 === 0) ? 2 : 4;
+        sum += weight * evalFunction(x);
+      }
+      return (sum * h) / 3;
+    }
+
+    /**
+     * Calculate Riemann Sum and build metadata for visualization
+     */
+    function calculateRiemannSum() {
+      riemannRectsData = [];
+      const dx = (paramB - paramA) / partitionN;
+      let totalSum = 0;
+
+      for (let k = 1; k <= partitionN; k++) {
+        let xEval;
+        const xStart = paramA + (k - 1) * dx;
+        const xEnd = paramA + k * dx;
+
+        if (approxMode === 'right') {
+          xEval = xEnd;
+        } else if (approxMode === 'left') {
+          xEval = xStart;
+        } else { // mid
+          xEval = xStart + dx * 0.5;
+        }
+
+        const height = evalFunction(xEval);
+        const area = height * dx;
+        
+        if (!isNaN(height) && isFinite(height)) {
+          totalSum += area;
+        }
+
+        riemannRectsData.push({
+          k: k,
+          xStart: xStart,
+          xEnd: xEnd,
+          xEval: xEval,
+          height: height,
+          width: dx,
+          area: area
+        });
+      }
+
+      return { totalSum, dx };
+    }
+
+    /**
+     * Render LaTeX formulas using KaTeX
+     */
+    function updateFormulas(approxVal, exactVal, dx) {
+      // General formula
+      let sigmaTex = '';
+      if (approxMode === 'right') {
+        sigmaTex = `\\lim_{n \\to \\infty} \\sum_{k=1}^{n} f\\left(a + k\\frac{b-a}{n}\\right)\\frac{b-a}{n} = \\int_{a}^{b} f(x)dx`;
+      } else if (approxMode === 'left') {
+        sigmaTex = `\\lim_{n \\to \\infty} \\sum_{k=0}^{n-1} f\\left(a + k\\frac{b-a}{n}\\right)\\frac{b-a}{n} = \\int_{a}^{b} f(x)dx`;
+      } else {
+        sigmaTex = `\\lim_{n \\to \\infty} \\sum_{k=1}^{n} f\\left(a + (k-0.5)\\frac{b-a}{n}\\right)\\frac{b-a}{n} = \\int_{a}^{b} f(x)dx`;
+      }
+
+      try {
+        katex.render(sigmaTex, formulaGeneral, { displayMode: true, throwOnError: false });
+      } catch (e) {}
+
+      // Current values formula
+      const aFormatted = Math.round(paramA * 1000) / 1000;
+      const bFormatted = Math.round(paramB * 1000) / 1000;
+      const currentTex = `S_{${partitionN}} = \\sum f(x_k)\\Delta x \\approx ${approxVal.toFixed(6)} \\quad \\left( \\int_{${aFormatted}}^{${bFormatted}} f(x)dx \\approx ${exactVal.toFixed(6)} \\right)`;
+      
+      try {
+        katex.render(currentTex, formulaCurrent, { displayMode: false, throwOnError: false });
+      } catch (e) {}
+
+      // Re-render MathJax/KaTeX inline elements in headers/labels
+      document.querySelectorAll('.katex-render').forEach(el => {
+        try {
+          katex.render(el.dataset.tex, el, { throwOnError: false });
+        } catch (e) {}
+      });
+    }
+
+    /**
+     * Auto fit viewport coordinates based on function bounds
+     */
+    function fitViewToData() {
+      const marginX = Math.max(0.2, (paramB - paramA) * 0.15);
+      viewXMin = paramA - marginX;
+      viewXMax = paramB + marginX;
+
+      // Sample y values in interval to fit height
+      let minY = 0;
+      let maxY = 0;
+      const samples = 100;
+      const step = (paramB - paramA) / samples;
+
+      for (let i = 0; i <= samples; i++) {
+        const x = paramA + i * step;
+        const y = evalFunction(x);
+        if (!isNaN(y) && isFinite(y)) {
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+
+      const height = maxY - minY || 1;
+      viewYMin = minY - height * 0.25;
+      viewYMax = maxY + height * 0.25;
+
+      // Ensure 0 is included vertically for nice axes
+      if (viewYMin > -0.1) viewYMin = -0.1 * height;
+      if (viewYMax < 0.1) viewYMax = 0.1 * height;
+
+      drawCanvas();
+    }
+
+    /**
+     * World to Screen & Screen to World Converters
+     */
+    function worldToScreen(wx, wy) {
+      const rect = canvas.getBoundingClientRect();
+      const sx = ((wx - viewXMin) / (viewXMax - viewXMin)) * canvas.width;
+      const sy = canvas.height - ((wy - viewYMin) / (viewYMax - viewYMin)) * canvas.height;
+      return { x: sx, y: sy };
+    }
+
+    function screenToWorld(sx, sy) {
+      const wx = viewXMin + (sx / canvas.width) * (viewXMax - viewXMin);
+      const wy = viewYMin + ((canvas.height - sy) / canvas.height) * (viewYMax - viewYMin);
+      return { x: wx, y: wy };
+    }
+
+    /**
+     * Canvas Drawing Engine
+     */
+    function drawCanvas() {
+      if (!canvas.width || !canvas.height) return;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Background
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 1. Draw Grid Lines
+      drawGrid();
+
+      // 2. Draw Axes
+      drawAxes();
+
+      // 3. Draw Interval Boundary Lines (a and b)
+      drawIntervalLines();
+
+      // 4. Draw Riemann Rectangles
+      drawRiemannRectangles();
+
+      // 5. Draw Function Curve y = f(x)
+      drawFunctionCurve();
+    }
+
+    function drawGrid() {
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = '#e2e8f0';
+
+      const xRange = viewXMax - viewXMin;
+      let xGridStep = Math.pow(10, Math.floor(Math.log10(xRange))) / 2;
+      if (xRange / xGridStep > 20) xGridStep *= 2;
+
+      const startX = Math.floor(viewXMin / xGridStep) * xGridStep;
+      for (let x = startX; x <= viewXMax; x += xGridStep) {
+        const pt = worldToScreen(x, 0);
+        ctx.beginPath();
+        ctx.moveTo(pt.x, 0);
+        ctx.lineTo(pt.x, canvas.height);
+        ctx.stroke();
+      }
+
+      const yRange = viewYMax - viewYMin;
+      let yGridStep = Math.pow(10, Math.floor(Math.log10(yRange))) / 2;
+      if (yRange / yGridStep > 20) yGridStep *= 2;
+
+      const startY = Math.floor(viewYMin / yGridStep) * yGridStep;
+      for (let y = startY; y <= viewYMax; y += yGridStep) {
+        const pt = worldToScreen(0, y);
+        ctx.beginPath();
+        ctx.moveTo(0, pt.y);
+        ctx.lineTo(canvas.width, pt.y);
+        ctx.stroke();
+      }
+    }
+
+    function drawAxes() {
+      const origin = worldToScreen(0, 0);
+
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#64748b';
+      ctx.fillStyle = '#475569';
+      ctx.font = '11px Inter, sans-serif';
+
+      // X-Axis
+      if (origin.y >= 0 && origin.y <= canvas.height) {
+        ctx.beginPath();
+        ctx.moveTo(0, origin.y);
+        ctx.lineTo(canvas.width, origin.y);
+        ctx.stroke();
+      }
+
+      // Y-Axis
+      if (origin.x >= 0 && origin.x <= canvas.width) {
+        ctx.beginPath();
+        ctx.moveTo(origin.x, 0);
+        ctx.lineTo(origin.x, canvas.height);
+        ctx.stroke();
+      }
+    }
+
+    function drawIntervalLines() {
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#6366f1';
+
+      // Line at x = a
+      const ptA = worldToScreen(paramA, 0);
+      ctx.beginPath();
+      ctx.moveTo(ptA.x, 0);
+      ctx.lineTo(ptA.x, canvas.height);
+      ctx.stroke();
+
+      // Line at x = b
+      const ptB = worldToScreen(paramB, 0);
+      ctx.beginPath();
+      ctx.moveTo(ptB.x, 0);
+      ctx.lineTo(ptB.x, canvas.height);
+      ctx.stroke();
+
+      ctx.restore();
+
+      // Label A and B on axis
+      const zeroPos = worldToScreen(0, 0);
+      const labelY = Math.min(Math.max(zeroPos.y + 16, 20), canvas.height - 10);
+
+      ctx.fillStyle = '#4f46e5';
+      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`a = ${Math.round(paramA * 100) / 100}`, ptA.x, labelY);
+      ctx.fillText(`b = ${Math.round(paramB * 100) / 100}`, ptB.x, labelY);
+    }
+
+    function drawRiemannRectangles() {
+      const originY = worldToScreen(0, 0).y;
+
+      riemannRectsData.forEach((rect, index) => {
+        const p1 = worldToScreen(rect.xStart, rect.height);
+        const p2 = worldToScreen(rect.xEnd, 0);
+
+        const widthPx = p2.x - p1.x;
+        const heightPx = originY - p1.y;
+
+        const isHovered = (index === hoveredRectIndex);
+
+        ctx.save();
+
+        if (rect.height >= 0) {
+          // Positive area (Blue/Indigo tint)
+          ctx.fillStyle = isHovered ? 'rgba(251, 191, 36, 0.65)' : 'rgba(99, 102, 241, 0.35)';
+          ctx.strokeStyle = isHovered ? '#d97706' : 'rgba(79, 70, 229, 0.8)';
+        } else {
+          // Negative area (Rose tint)
+          ctx.fillStyle = isHovered ? 'rgba(251, 191, 36, 0.65)' : 'rgba(244, 63, 94, 0.35)';
+          ctx.strokeStyle = isHovered ? '#d97706' : 'rgba(225, 29, 72, 0.8)';
+        }
+
+        ctx.lineWidth = isHovered ? 2.5 : 1;
+
+        // Fill rectangle
+        ctx.fillRect(p1.x, p1.y, widthPx, heightPx);
+        // Stroke rectangle border
+        ctx.strokeRect(p1.x, p1.y, widthPx, heightPx);
+
+        // Draw Representative point dot
+        const evalPt = worldToScreen(rect.xEval, rect.height);
+        ctx.fillStyle = isHovered ? '#b45309' : '#4338ca';
+        ctx.beginPath();
+        ctx.arc(evalPt.x, evalPt.y, isHovered ? 4.5 : 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.restore();
+      });
+    }
+
+    function drawFunctionCurve() {
+      if (!compiledExpr) return;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#1e1b4b';
+
+      const steps = canvas.width * 2; // high density curve line
+      let isDrawing = false;
+
+      for (let i = 0; i <= steps; i++) {
+        const sx = (i / steps) * canvas.width;
+        const wx = screenToWorld(sx, 0).x;
+        const wy = evalFunction(wx);
+
+        if (isNaN(wy) || !isFinite(wy)) {
+          isDrawing = false;
+          continue;
+        }
+
+        const pt = worldToScreen(wx, wy);
+
+        // Clip smooth continuous rendering inside canvas boundary limits
+        if (pt.y < -1000 || pt.y > canvas.height + 1000) {
+          isDrawing = false;
+          continue;
+        }
+
+        if (!isDrawing) {
+          ctx.moveTo(pt.x, pt.y);
+          isDrawing = true;
+        } else {
+          ctx.lineTo(pt.x, pt.y);
+        }
+      }
+
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    /**
+     * Mouse Hover Interaction & Tooltip Handler
+     */
+    function handleMouseMove(e) {
+      const rect = canvas.getBoundingClientRect();
+      const mouseSx = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const mouseSy = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      if (isDragging) {
+        const dxPx = mouseSx - dragStartX;
+        const dyPx = mouseSy - dragStartY;
+
+        const wxPerPx = (viewXMax - viewXMin) / canvas.width;
+        const wyPerPx = (viewYMax - viewYMin) / canvas.height;
+
+        viewXMin -= dxPx * wxPerPx;
+        viewXMax -= dxPx * wxPerPx;
+        viewYMin += dyPx * wyPerPx;
+        viewYMax += dyPx * wyPerPx;
+
+        dragStartX = mouseSx;
+        dragStartY = mouseSy;
+
+        drawCanvas();
+        return;
+      }
+
+      // Check hovered rectangle
+      const worldPt = screenToWorld(mouseSx, mouseSy);
+      let foundIndex = -1;
+
+      if (worldPt.x >= paramA && worldPt.x <= paramB) {
+        for (let i = 0; i < riemannRectsData.length; i++) {
+          const r = riemannRectsData[i];
+          if (worldPt.x >= r.xStart && worldPt.x <= r.xEnd) {
+            // Check vertical bounding
+            const minY = Math.min(0, r.height);
+            const maxY = Math.max(0, r.height);
+            if (worldPt.y >= minY && worldPt.y <= maxY) {
+              foundIndex = i;
+              break;
+            }
+          }
+        }
+      }
+
+      if (foundIndex !== hoveredRectIndex) {
+        hoveredRectIndex = foundIndex;
+        drawCanvas();
+      }
+
+      if (hoveredRectIndex >= 0) {
+        const data = riemannRectsData[hoveredRectIndex];
+        tooltip.style.display = 'block';
+        tooltip.style.left = `${e.clientX - rect.left + 15}px`;
+        tooltip.style.top = `${e.clientY - rect.top - 10}px`;
+
+        tooltip.innerHTML = `
+          <div class="font-bold text-amber-300">長方形 #${data.k} / ${partitionN}</div>
+          <div>小区間: <span class="font-mono text-slate-200">[${data.xStart.toFixed(3)}, ${data.xEnd.toFixed(3)}]</span></div>
+          <div>代表点 $x_k$: <span class="font-mono text-indigo-300">${data.xEval.toFixed(4)}</span></div>
+          <div>高さ $f(x_k)$: <span class="font-mono text-emerald-300">${data.height.toFixed(4)}</span></div>
+          <div>底辺 $\\Delta x$: <span class="font-mono text-slate-200">${data.width.toFixed(4)}</span></div>
+          <div class="border-t border-slate-700 pt-1 mt-1 font-bold">面積 $S_k$: <span class="font-mono text-amber-400">${data.area.toFixed(5)}</span></div>
+        `;
+        try {
+          katex.render(`x_k`, tooltip.querySelector('div:nth-child(3)'), { throwOnError: false });
+        } catch(err){}
+      } else {
+        tooltip.style.display = 'none';
+      }
+    }
+
+    /**
+     * Mouse Wheel Zoom Handler
+     */
+    function handleWheel(e) {
+      e.preventDefault();
+      const rect = canvas.getBoundingClientRect();
+      const mouseSx = (e.clientX - rect.left) * (canvas.width / rect.width);
+      const mouseSy = (e.clientY - rect.top) * (canvas.height / rect.height);
+
+      const mouseWorld = screenToWorld(mouseSx, mouseSy);
+      const zoomFactor = e.deltaY > 0 ? 1.12 : 0.88;
+
+      viewXMin = mouseWorld.x + (viewXMin - mouseWorld.x) * zoomFactor;
+      viewXMax = mouseWorld.x + (viewXMax - mouseWorld.x) * zoomFactor;
+      viewYMin = mouseWorld.y + (viewYMin - mouseWorld.y) * zoomFactor;
+      viewYMax = mouseWorld.y + (viewYMax - mouseWorld.y) * zoomFactor;
+
+      drawCanvas();
+    }
+
+    /**
+     * Master State Update & Render
+     */
+    function updateAll() {
+      // 1. Hide error panel first
+      errorMsg.classList.add('hidden');
+      errorMsg.innerHTML = '';
+
+      // 2. Parse inputs
+      const aVal = parseValue(aInput.value);
+      const bVal = parseValue(bInput.value);
+
+      if (isNaN(aVal) || isNaN(bVal)) {
+        showError('区間 [a, b] に有効な数値を入力してください。');
+        return;
+      }
+      if (aVal >= bVal) {
+        showError('区間の始点 a は 終点 b より小さく設定してください (a < b)。');
+        return;
+      }
+
+      paramA = aVal;
+      paramB = bVal;
+
+      // Compile Expression safely with Math.js
+      try {
+        currentExpr = funcInput.value.trim();
+        compiledExpr = math.compile(currentExpr);
+        
+        // Test compile at midpoint
+        const testY = evalFunction((paramA + paramB) / 2);
+        if (isNaN(testY) && !isUndefined(testY)) {
+          // Warning but non-blocking
+        }
+      } catch (err) {
+        showError(`関数構文エラー: 記述を確認してください (${err.message})`);
+        return;
+      }
+
+      // 3. Compute Riemann sums and Integrals
+      const { totalSum, dx } = calculateRiemannSum();
+      const exactIntegral = computeExactIntegral(paramA, paramB);
+      const absError = Math.abs(totalSum - exactIntegral);
+
+      // 4. Update UI displays
+      approxValElem.textContent = totalSum.toFixed(5);
+      exactValElem.textContent = exactIntegral.toFixed(5);
+      errorValElem.textContent = absError.toFixed(5);
+      dxValElem.textContent = `\\Delta x = ${dx.toFixed(4)}`;
+
+      // Render KaTeX dx
+      try {
+        katex.render(`\\Delta x = ${dx.toFixed(4)}`, dxValElem, { throwOnError: false });
+      } catch(e){}
+
+      // 5. Update KaTeX LaTeX Formula Panel
+      updateFormulas(totalSum, exactIntegral, dx);
+
+      // 6. Redraw Canvas
+      drawCanvas();
+    }
+
+    function showError(msg) {
+      errorMsg.innerHTML = `<strong>エラー:</strong> ${msg}`;
+      errorMsg.classList.remove('hidden');
+    }
+
+    /**
+     * Presets Generator
+     */
+    function initPresets() {
+      const container = document.getElementById('preset-buttons');
+      container.innerHTML = '';
+
+      PRESETS.forEach(preset => {
+        const btn = document.createElement('button');
+        btn.className = 'py-1 px-2 text-xs font-medium rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 border border-slate-200 text-slate-700 transition text-center truncate';
+        btn.textContent = preset.name;
+        btn.addEventListener('click', () => {
+          funcInput.value = preset.expr;
+          aInput.value = preset.a;
+          bInput.value = preset.b;
+          updateAll();
+          fitViewToData();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    /**
+     * Animation Loop for Auto-incrementing N
+     */
+    function toggleAnimation() {
+      isAnimating = !isAnimating;
+
+      if (isAnimating) {
+        animateBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+        animateBtn.classList.add('bg-rose-600', 'hover:bg-rose-700');
+        animateText.textContent = '停止';
+        playIcon.innerHTML = `<path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"></path>`;
+
+        animInterval = setInterval(() => {
+          partitionN = (partitionN >= 200) ? 1 : partitionN + 1;
+          nSlider.value = partitionN;
+          nInput.value = partitionN;
+          updateAll();
+        }, 120);
+      } else {
+        animateBtn.classList.remove('bg-rose-600', 'hover:bg-rose-700');
+        animateBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+        animateText.textContent = '自動増加アニメーション';
+        playIcon.innerHTML = `<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>`;
+
+        clearInterval(animInterval);
+      }
+    }
+
+    /**
+     * Canvas Auto-Resize Logic
+     */
+    function resizeCanvas() {
+      const rect = canvasContainer.getBoundingClientRect();
+      canvas.width = rect.width;
+      canvas.height = rect.height;
+      drawCanvas();
+    }
+
+    /**
+     * Initialize Event Listeners
+     */
+    function initEvents() {
+      // Resize listener
+      window.addEventListener('resize', resizeCanvas);
+
+      // Inputs change listeners
+      funcInput.addEventListener('input', updateAll);
+      aInput.addEventListener('input', () => { updateAll(); fitViewToData(); });
+      bInput.addEventListener('input', () => { updateAll(); fitViewToData(); });
+
+      // N Partition Controls
+      nSlider.addEventListener('input', (e) => {
+        partitionN = parseInt(e.target.value, 10);
+        nInput.value = partitionN;
+        updateAll();
+      });
+
+      nInput.addEventListener('change', (e) => {
+        let val = parseInt(e.target.value, 10) || 1;
+        val = Math.max(1, Math.min(500, val));
+        partitionN = val;
+        nInput.value = val;
+        nSlider.value = Math.min(val, 200);
+        updateAll();
+      });
+
+      nDecrement.addEventListener('click', () => {
+        if (partitionN > 1) {
+          partitionN--;
+          nSlider.value = partitionN;
+          nInput.value = partitionN;
+          updateAll();
+        }
+      });
+
+      nIncrement.addEventListener('click', () => {
+        if (partitionN < 500) {
+          partitionN++;
+          nSlider.value = partitionN;
+          nInput.value = partitionN;
+          updateAll();
+        }
+      });
+
+      // Mode Selector Buttons
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.mode-btn').forEach(b => {
+            b.classList.remove('border-indigo-600', 'bg-indigo-50', 'text-indigo-700', 'shadow-sm');
+            b.classList.add('border-slate-200', 'bg-slate-50', 'text-slate-600');
+          });
+          btn.classList.remove('border-slate-200', 'bg-slate-50', 'text-slate-600');
+          btn.classList.add('border-indigo-600', 'bg-indigo-50', 'text-indigo-700', 'shadow-sm');
+
+          approxMode = btn.dataset.mode;
+          updateAll();
+        });
+      });
+
+      // Animation Toggle
+      animateBtn.addEventListener('click', toggleAnimation);
+
+      // Canvas Drag & Zoom
+      canvas.addEventListener('mousedown', (e) => {
+        isDragging = true;
+        const rect = canvas.getBoundingClientRect();
+        dragStartX = (e.clientX - rect.left) * (canvas.width / rect.width);
+        dragStartY = (e.clientY - rect.top) * (canvas.height / rect.height);
+      });
+
+      window.addEventListener('mouseup', () => { isDragging = false; });
+      canvas.addEventListener('mousemove', handleMouseMove);
+      canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+      // Canvas Zoom Control Buttons
+      document.getElementById('btn-zoom-in').addEventListener('click', () => {
+        const cx = (viewXMin + viewXMax) / 2;
+        const cy = (viewYMin + viewYMax) / 2;
+        const dx = (viewXMax - viewXMin) * 0.4;
+        const dy = (viewYMax - viewYMin) * 0.4;
+        viewXMin = cx - dx; viewXMax = cx + dx;
+        viewYMin = cy - dy; viewYMax = cy + dy;
+        drawCanvas();
+      });
+
+      document.getElementById('btn-zoom-out').addEventListener('click', () => {
+        const cx = (viewXMin + viewXMax) / 2;
+        const cy = (viewYMin + viewYMax) / 2;
+        const dx = (viewXMax - viewXMin) * 0.65;
+        const dy = (viewYMax - viewYMin) * 0.65;
+        viewXMin = cx - dx; viewXMax = cx + dx;
+        viewYMin = cy - dy; viewYMax = cy + dy;
+        drawCanvas();
+      });
+
+      document.getElementById('btn-fit-view').addEventListener('click', fitViewToData);
+    }
+
+    /**
+     * App Entry Point
+     */
+    window.addEventListener('load', () => {
+      initPresets();
+      initEvents();
+      resizeCanvas();
+      updateAll();
+      fitViewToData();
+    });
+
+  </script>
+</body>
+</html>
